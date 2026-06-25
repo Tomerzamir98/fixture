@@ -105,14 +105,28 @@ router.get("/:id/recommendation", async (req, res) => {
       ? last5.filter((g) => g.minutes >= 60).length / last5.length
       : 0;
 
-    const vsScore = avgPoints ? parseFloat(avgPoints) / 12 : 0.5;
-    const formScore = parseFloat(formAvg) / 12;
-    const score = Math.round(
-      (vsScore * 0.35 + formScore * 0.45 + minutesPct * 0.2) * 100,
-    );
+    const avg = avgPoints ? parseFloat(avgPoints) : 0;
+    const position = playerElement ? playerElement.element_type : 3;
 
+    let startThreshold, considerThreshold;
+    if (position === 1 || position === 2) {
+      startThreshold = 4;
+      considerThreshold = 2.5;
+    } else if (position === 3) {
+      startThreshold = 5.5;
+      considerThreshold = 3.5;
+    } else {
+      startThreshold = 5;
+      considerThreshold = 3;
+    }
+
+    const score = Math.round((avg / 12) * 100);
     const recommendation =
-      score >= 65 ? "START" : score >= 45 ? "CONSIDER" : "BENCH";
+      avg >= startThreshold
+        ? "START"
+        : avg >= considerThreshold
+          ? "CONSIDER"
+          : "BENCH";
 
     res.json({
       opponent: opponentId,
