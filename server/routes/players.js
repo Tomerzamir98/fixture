@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getBootstrap, getPlayerSummary } = require("../services/fplApi");
+const { getPlayerVsOpponent } = require("../services/historicalData");
 
 // GET /api/players?search=salah
 router.get("/", async (req, res) => {
@@ -12,7 +13,7 @@ router.get("/", async (req, res) => {
       id: p.id,
       name: `${p.first_name} ${p.second_name}`,
       team: p.team,
-      position: p.element_type, // 1=GK 2=DEF 3=MID 4=FWD
+      position: p.element_type,
       price: p.now_cost / 10,
       totalPoints: p.total_points,
       form: p.form,
@@ -45,23 +46,52 @@ router.get("/:id/fixtures", async (req, res) => {
 router.get("/:id/recommendation", async (req, res) => {
   try {
     const data = await getPlayerSummary(req.params.id);
+    const bootstrap = await getBootstrap();
 
     const nextMatch = data.history[data.history.length - 1];
     if (!nextMatch) return res.json(null);
 
     const opponentId = nextMatch.opponent_team;
-    const vsOpponent = data.history.filter(
+    const opponentTeam = bootstrap.teams.find((t) => t.id === opponentId);
+    const opponentName = opponentTeam ? opponentTeam.name : null;
+
+    const playerElement = bootstrap.elements.find(
+      (e) => e.id === parseInt(req.params.id),
+    );
+    const fullName = playerElement
+      ? `${playerElement.first_name} ${playerElement.second_name}`
+      : null;
+
+    // נסה היסטוריה מ-CSV
+    let vsOpponentHistorical = [];
+    if (fullName && opponentName) {
+      vsOpponentHistorical = getPlayerVsOpponent(fullName, opponentId);
+    }
+
+    // fallback לעונה הנוכחית
+    const vsOpponentCurrent = data.history.filter(
       (g) => g.opponent_team === opponentId,
     );
+    const vsOpponent =
+      vsOpponentHistorical.length > 0
+        ? vsOpponentHistorical
+        : vsOpponentCurrent;
 
     const avgPoints = vsOpponent.length
       ? (
-          vsOpponent.reduce((s, g) => s + g.total_points, 0) / vsOpponent.length
+          vsOpponent.reduce((s, g) => s + parseFloat(g.total_points || 0), 0) /
+          vsOpponent.length
         ).toFixed(1)
       : null;
 
-    const goals = vsOpponent.reduce((s, g) => s + g.goals_scored, 0);
-    const assists = vsOpponent.reduce((s, g) => s + g.assists, 0);
+    const goals = vsOpponent.reduce(
+      (s, g) => s + parseInt(g.goals_scored || 0),
+      0,
+    );
+    const assists = vsOpponent.reduce(
+      (s, g) => s + parseInt(g.assists || 0),
+      0,
+    );
     const gamesVs = vsOpponent.length;
 
     const last5 = data.history.slice(-5);
@@ -96,6 +126,10 @@ router.get("/:id/recommendation", async (req, res) => {
       assists,
       formAvg,
       minutesPct: Math.round(minutesPct * 100),
+      dataSource:
+        vsOpponentHistorical.length > 0
+          ? `${vsOpponentHistorical.length} games (3 seasons)`
+          : `${vsOpponentCurrent.length} games (this season)`,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

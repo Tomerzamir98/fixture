@@ -106,20 +106,19 @@ function PlayerRow({ player }) {
   return (
     <div
       style={{
-        marginBottom: 14,
+        marginBottom: 12,
         borderRadius: 12,
         border: `2px solid ${open ? "#38003c" : "#e0e0e0"}`,
         overflow: "hidden",
         boxShadow: open
           ? "0 4px 16px rgba(56,0,60,0.10)"
           : "0 1px 4px rgba(0,0,0,0.05)",
-        transition: "box-shadow 0.2s",
       }}
     >
       <div
         onClick={toggle}
         style={{
-          padding: "14px 18px",
+          padding: "12px 14px",
           cursor: "pointer",
           background: open ? "#f5eef8" : "#fff",
           display: "flex",
@@ -128,31 +127,47 @@ function PlayerRow({ player }) {
           userSelect: "none",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <strong style={{ fontSize: 16 }}>{player.name}</strong>
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}
+        >
+          <strong
+            style={{
+              fontSize: 15,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {player.name}
+          </strong>
           <span
             style={{
               background: "#38003c",
               color: "#fff",
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 700,
-              padding: "2px 7px",
+              padding: "2px 6px",
               borderRadius: 4,
-              letterSpacing: 1,
+              flexShrink: 0,
             }}
           >
             {POSITION_MAP[player.position]}
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <span style={{ fontSize: 13, color: "#666" }}>£{player.price}m</span>
-          <span style={{ fontSize: 13, color: "#333", fontWeight: 600 }}>
-            {player.totalPoints} pts
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexShrink: 0,
+            marginLeft: 8,
+          }}
+        >
+          <span style={{ fontSize: 12, color: "#333", fontWeight: 600 }}>
+            {player.totalPoints}pts
           </span>
-          <span style={{ fontSize: 13, color: "#666" }}>
-            Form: <strong>{player.form}</strong>
-          </span>
-          <span style={{ fontSize: 16, color: "#38003c" }}>
+          <span style={{ fontSize: 12, color: "#666" }}>£{player.price}m</span>
+          <span style={{ fontSize: 14, color: "#38003c" }}>
             {open ? "▲" : "▼"}
           </span>
         </div>
@@ -161,7 +176,7 @@ function PlayerRow({ player }) {
       {open && (
         <div
           style={{
-            padding: "18px 18px 20px",
+            padding: "14px 12px 16px",
             background: "#fafafa",
             borderTop: "1px solid #ececec",
           }}
@@ -171,29 +186,21 @@ function PlayerRow({ player }) {
           {!loading && rec && (
             <div
               style={{
-                marginBottom: 16,
-                padding: "16px 20px",
+                marginBottom: 14,
+                padding: "14px 16px",
                 borderRadius: 12,
                 background: recColor,
                 color: "#fff",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
               }}
             >
-              <div>
-                <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
-                  GW{rec.round} · vs {TEAM_MAP[rec.opponent]}{" "}
-                  {rec.isHome ? "(H)" : "(A)"}
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 800 }}>{recLabel}</div>
-                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
-                  Score: {rec.score}/100
-                </div>
+              <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 4 }}>
+                GW{rec.round} · vs {TEAM_MAP[rec.opponent]}{" "}
+                {rec.isHome ? "(H)" : "(A)"}
               </div>
-              <div
-                style={{ textAlign: "right", fontSize: 13, lineHeight: 1.8 }}
-              >
+              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
+                {recLabel}
+              </div>
+              <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                 <div>
                   📊 Avg vs {TEAM_MAP[rec.opponent]}:{" "}
                   <strong>{rec.avgPoints} pts</strong> ({rec.gamesVs} game
@@ -209,6 +216,9 @@ function PlayerRow({ player }) {
                 <div>
                   ⏱ Plays 60+ min: <strong>{rec.minutesPct}%</strong>
                 </div>
+                <div style={{ fontSize: 11, opacity: 0.75, marginTop: 4 }}>
+                  Score: {rec.score}/100
+                </div>
               </div>
             </div>
           )}
@@ -220,9 +230,10 @@ function PlayerRow({ player }) {
             <div
               style={{
                 display: "flex",
-                gap: 12,
+                gap: 8,
                 overflowX: "auto",
                 paddingBottom: 8,
+                WebkitOverflowScrolling: "touch",
               }}
             >
               {history.map((f, i) => {
@@ -233,11 +244,11 @@ function PlayerRow({ player }) {
                   <div
                     key={i}
                     style={{
-                      flex: "0 0 120px",
+                      flex: "0 0 100px",
                       borderRadius: 10,
                       overflow: "hidden",
                       border: "1px solid #e0e0e0",
-                      boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
                     }}
                   >
                     <div
@@ -245,51 +256,51 @@ function PlayerRow({ player }) {
                         background: pointsColor(f.total_points),
                         color: "#fff",
                         textAlign: "center",
-                        padding: "14px 8px 12px",
+                        padding: "10px 6px",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: 600,
                           opacity: 0.85,
-                          marginBottom: 2,
+                          marginBottom: 1,
                         }}
                       >
                         GW{f.round}
                       </div>
                       <div
                         style={{
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: 700,
-                          marginBottom: 8,
+                          marginBottom: 6,
                         }}
                       >
                         vs {opponent} {f.was_home ? "(H)" : "(A)"}
                       </div>
                       <div
-                        style={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}
+                        style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}
                       >
                         {f.total_points}
                       </div>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 3 }}>
+                      <div style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>
                         pts
                       </div>
                     </div>
                     <div
                       style={{
                         background: "#fff",
-                        padding: "10px 12px",
-                        minHeight: 50,
+                        padding: "8px 8px",
+                        minHeight: 40,
                       }}
                     >
                       {breakdown.length === 0 ? (
                         <div
                           style={{
-                            fontSize: 12,
+                            fontSize: 11,
                             color: "#bbb",
                             textAlign: "center",
-                            paddingTop: 8,
+                            paddingTop: 6,
                           }}
                         >
                           —
@@ -299,9 +310,9 @@ function PlayerRow({ player }) {
                           <div
                             key={j}
                             style={{
-                              fontSize: 12,
+                              fontSize: 10,
                               color: "#333",
-                              marginBottom: 5,
+                              marginBottom: 4,
                               lineHeight: 1.4,
                             }}
                           >
@@ -349,54 +360,54 @@ export default function App() {
       style={{
         fontFamily: "'Segoe UI', sans-serif",
         maxWidth: 860,
-        margin: "40px auto",
-        padding: "0 24px",
+        margin: "0 auto",
+        padding: "20px 16px",
       }}
     >
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1
           style={{
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: 800,
-            marginBottom: 4,
+            marginBottom: 2,
             color: "#38003c",
             letterSpacing: -1,
           }}
         >
           ⚽ FIXTURE
         </h1>
-        <p style={{ color: "#888", fontSize: 14, margin: 0 }}>
-          FPL Fixture Analyzer — Last 5 Games
+        <p style={{ color: "#888", fontSize: 13, margin: 0 }}>
+          FPL Fixture Analyzer
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && searchPlayers()}
-          placeholder="Search player (e.g. Salah, Haaland...)"
+          placeholder="Search player..."
           style={{
             flex: 1,
-            padding: "12px 16px",
+            padding: "11px 14px",
             borderRadius: 8,
             border: "2px solid #e0e0e0",
             fontSize: 15,
             outline: "none",
+            minWidth: 0,
           }}
         />
         <button
           onClick={searchPlayers}
           style={{
-            padding: "12px 24px",
+            padding: "11px 16px",
             borderRadius: 8,
             background: "#38003c",
             color: "#fff",
             border: "none",
             cursor: "pointer",
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 700,
-            letterSpacing: 0.5,
           }}
         >
           Search
@@ -404,13 +415,13 @@ export default function App() {
         <button
           onClick={clearSearch}
           style={{
-            padding: "12px 20px",
+            padding: "11px 12px",
             borderRadius: 8,
             background: "#fff",
             color: "#38003c",
             border: "2px solid #38003c",
             cursor: "pointer",
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 700,
           }}
         >
@@ -418,7 +429,7 @@ export default function App() {
         </button>
       </div>
 
-      {loading && <p style={{ color: "#888" }}>Loading players...</p>}
+      {loading && <p style={{ color: "#888" }}>Loading...</p>}
       {players.map((p) => (
         <PlayerRow key={p.id} player={p} />
       ))}
