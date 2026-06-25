@@ -52,8 +52,6 @@ router.get("/:id/recommendation", async (req, res) => {
     if (!nextMatch) return res.json(null);
 
     const opponentId = nextMatch.opponent_team;
-    const opponentTeam = bootstrap.teams.find((t) => t.id === opponentId);
-    const opponentName = opponentTeam ? opponentTeam.name : null;
 
     const playerElement = bootstrap.elements.find(
       (e) => e.id === parseInt(req.params.id),
@@ -64,7 +62,7 @@ router.get("/:id/recommendation", async (req, res) => {
 
     // נסה היסטוריה מ-CSV
     let vsOpponentHistorical = [];
-    if (fullName && opponentName) {
+    if (fullName) {
       vsOpponentHistorical = getPlayerVsOpponent(fullName, opponentId);
     }
 
@@ -107,6 +105,11 @@ router.get("/:id/recommendation", async (req, res) => {
 
     const avg = avgPoints ? parseFloat(avgPoints) : 0;
     const position = playerElement ? playerElement.element_type : 3;
+    const formScore = parseFloat(formAvg) / 12;
+    const vsScore = avg / 12;
+    const score = Math.round(
+      (vsScore * 0.4 + formScore * 0.4 + minutesPct * 0.2) * 100,
+    );
 
     let startThreshold, considerThreshold;
     if (position === 1 || position === 2) {
@@ -120,7 +123,6 @@ router.get("/:id/recommendation", async (req, res) => {
       considerThreshold = 3;
     }
 
-    const score = Math.round((avg / 12) * 100);
     const recommendation =
       avg >= startThreshold
         ? "START"

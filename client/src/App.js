@@ -195,7 +195,7 @@ function PlayerRow({ player }) {
             >
               <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 4 }}>
                 GW{rec.round} · vs {TEAM_MAP[rec.opponent]}{" "}
-                {rec.isHome ? "(H)" : "(A)"}
+                {rec.isHome ? "🏠 Home" : "✈️ Away"}
               </div>
               <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
                 {recLabel}
@@ -211,10 +211,12 @@ function PlayerRow({ player }) {
                   {rec.assists} assist{rec.assists !== 1 ? "s" : ""}
                 </div>
                 <div>
-                  🔥 Form avg: <strong>{rec.formAvg} pts</strong>
+                  🔥 Form avg (last 5 fixtures):{" "}
+                  <strong>{rec.formAvg} pts</strong>
                 </div>
                 <div>
-                  ⏱ Plays 60+ min: <strong>{rec.minutesPct}%</strong>
+                  ⏱ Started 60+ min: <strong>{rec.minutesPct}%</strong> of last
+                  5 games
                 </div>
                 <div style={{ fontSize: 11, opacity: 0.75, marginTop: 4 }}>
                   Score: {rec.score}/100
@@ -276,7 +278,7 @@ function PlayerRow({ player }) {
                           marginBottom: 6,
                         }}
                       >
-                        vs {opponent} {f.was_home ? "(H)" : "(A)"}
+                        vs {opponent} {f.was_home ? "🏠" : "✈️"}
                       </div>
                       <div
                         style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}
