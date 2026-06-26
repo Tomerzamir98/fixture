@@ -152,4 +152,41 @@ router.get("/:id/recommendation", async (req, res) => {
   }
 });
 
+// GET /api/team/:teamId/:gw
+router.get("/team/:teamId/:gw", async (req, res) => {
+  try {
+    const { teamId, gw } = req.params;
+    const axios = require("axios");
+
+    // שליפת השחקנים בהרכב
+    const picksRes = await axios.get(
+      `https://fantasy.premierleague.com/api/entry/${teamId}/event/${gw}/picks/`,
+    );
+    const picks = picksRes.data.picks;
+
+    // שליפת כל השחקנים
+    const bootstrap = await getBootstrap();
+
+    const players = picks.map((pick) => {
+      const player = bootstrap.elements.find((e) => e.id === pick.element);
+      return {
+        id: player.id,
+        name: `${player.first_name} ${player.second_name}`,
+        position: player.element_type,
+        price: player.now_cost / 10,
+        totalPoints: player.total_points,
+        form: player.form,
+        multiplier: pick.multiplier, // 0=bench, 1=playing, 2=captain, 3=triple
+        isCaptain: pick.is_captain,
+        isViceCaptain: pick.is_vice_captain,
+        pickPosition: pick.position, // 1-11 = starting, 12-15 = bench
+      };
+    });
+
+    res.json(players);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

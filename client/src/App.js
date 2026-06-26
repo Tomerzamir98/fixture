@@ -182,7 +182,6 @@ function PlayerRow({ player }) {
           }}
         >
           {loading && <p style={{ color: "#888", fontSize: 14 }}>Loading...</p>}
-
           {!loading && rec && (
             <div
               style={{
@@ -224,7 +223,6 @@ function PlayerRow({ player }) {
               </div>
             </div>
           )}
-
           {!loading && history.length === 0 && (
             <p style={{ color: "#aaa", fontSize: 14 }}>No data found.</p>
           )}
@@ -334,7 +332,265 @@ function PlayerRow({ player }) {
   );
 }
 
+function TeamCard({ player }) {
+  const [rec, setRec] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = async () => {
+    if (loaded) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/players/${player.id}/recommendation`);
+      const data = await res.json();
+      setRec(data);
+      setLoaded(true);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
+  useState(() => {
+    load();
+  }, []);
+
+  const recColor =
+    rec?.recommendation === "START"
+      ? "#00985f"
+      : rec?.recommendation === "CONSIDER"
+        ? "#d4a017"
+        : "#c0392b";
+  const recLabel =
+    rec?.recommendation === "START"
+      ? "✅ START"
+      : rec?.recommendation === "CONSIDER"
+        ? "⚠️ CONSIDER"
+        : "❌ BENCH";
+
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        borderRadius: 10,
+        border: `2px solid ${player.isCaptain ? "#f4a700" : player.isViceCaptain ? "#aaa" : "#e0e0e0"}`,
+        background: player.pickPosition > 11 ? "#f9f9f9" : "#fff",
+        marginBottom: 8,
+        opacity: player.pickPosition > 11 ? 0.7 : 1,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {player.isCaptain && (
+            <span
+              style={{
+                fontSize: 11,
+                background: "#f4a700",
+                color: "#fff",
+                padding: "1px 5px",
+                borderRadius: 4,
+                fontWeight: 700,
+              }}
+            >
+              C
+            </span>
+          )}
+          {player.isViceCaptain && (
+            <span
+              style={{
+                fontSize: 11,
+                background: "#888",
+                color: "#fff",
+                padding: "1px 5px",
+                borderRadius: 4,
+                fontWeight: 700,
+              }}
+            >
+              V
+            </span>
+          )}
+          {player.pickPosition > 11 && (
+            <span
+              style={{
+                fontSize: 11,
+                background: "#ccc",
+                color: "#555",
+                padding: "1px 5px",
+                borderRadius: 4,
+                fontWeight: 700,
+              }}
+            >
+              BENCH
+            </span>
+          )}
+          <strong style={{ fontSize: 14 }}>{player.name}</strong>
+          <span
+            style={{
+              background: "#38003c",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 700,
+              padding: "2px 5px",
+              borderRadius: 4,
+            }}
+          >
+            {POSITION_MAP[player.position]}
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: "#666" }}>£{player.price}m</div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        {loading && (
+          <span style={{ fontSize: 12, color: "#aaa" }}>Loading...</span>
+        )}
+        {rec && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              style={{
+                background: recColor,
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "3px 8px",
+                borderRadius: 6,
+              }}
+            >
+              {recLabel}
+            </span>
+            <span style={{ fontSize: 11, color: "#666" }}>
+              vs {TEAM_MAP[rec.opponent]} {rec.isHome ? "🏠" : "✈️"} · avg{" "}
+              {rec.avgPoints} pts ({rec.gamesVs} games)
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MyTeam() {
+  const [teamId, setTeamId] = useState("");
+  const [gw, setGw] = useState("38");
+  const [team, setTeam] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadTeam = async () => {
+    if (!teamId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API}/api/players/team/${teamId}/${gw}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setTeam(data);
+    } catch (err) {
+      setError("Team not found. Check your Team ID and GW.");
+    }
+    setLoading(false);
+  };
+
+  const starters = team?.filter((p) => p.pickPosition <= 11) || [];
+  const bench = team?.filter((p) => p.pickPosition > 11) || [];
+
+  return (
+    <div>
+      <div
+        style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}
+      >
+        <input
+          value={teamId}
+          onChange={(e) => setTeamId(e.target.value)}
+          placeholder="FPL Team ID (e.g. 6359518)"
+          style={{
+            flex: 1,
+            minWidth: 180,
+            padding: "11px 14px",
+            borderRadius: 8,
+            border: "2px solid #e0e0e0",
+            fontSize: 14,
+            outline: "none",
+          }}
+        />
+        <input
+          value={gw}
+          onChange={(e) => setGw(e.target.value)}
+          placeholder="GW"
+          style={{
+            width: 70,
+            padding: "11px 10px",
+            borderRadius: 8,
+            border: "2px solid #e0e0e0",
+            fontSize: 14,
+            outline: "none",
+          }}
+        />
+        <button
+          onClick={loadTeam}
+          style={{
+            padding: "11px 16px",
+            borderRadius: 8,
+            background: "#38003c",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          Load Team
+        </button>
+      </div>
+
+      {error && <p style={{ color: "#c0392b", fontSize: 14 }}>{error}</p>}
+      {loading && <p style={{ color: "#888" }}>Loading team...</p>}
+
+      {team && (
+        <div>
+          <p style={{ fontSize: 12, color: "#888", marginBottom: 16 }}>
+            💡 Find your Team ID in the URL of your FPL team page
+          </p>
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#38003c",
+              marginBottom: 10,
+            }}
+          >
+            ⬆️ Starting XI
+          </h3>
+          {starters.map((p) => (
+            <TeamCard key={p.id} player={p} />
+          ))}
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#888",
+              marginBottom: 10,
+              marginTop: 16,
+            }}
+          >
+            🪑 Bench
+          </h3>
+          {bench.map((p) => (
+            <TeamCard key={p.id} player={p} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
+  const [page, setPage] = useState("search");
   const [search, setSearch] = useState("");
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -366,7 +622,7 @@ export default function App() {
         padding: "20px 16px",
       }}
     >
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 20 }}>
         <h1
           style={{
             fontSize: 28,
@@ -383,58 +639,97 @@ export default function App() {
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && searchPlayers()}
-          placeholder="Search player..."
-          style={{
-            flex: 1,
-            padding: "11px 14px",
-            borderRadius: 8,
-            border: "2px solid #e0e0e0",
-            fontSize: 15,
-            outline: "none",
-            minWidth: 0,
-          }}
-        />
+      {/* Navigation */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         <button
-          onClick={searchPlayers}
+          onClick={() => setPage("search")}
           style={{
-            padding: "11px 16px",
+            padding: "8px 16px",
             borderRadius: 8,
-            background: "#38003c",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: 700,
-          }}
-        >
-          Search
-        </button>
-        <button
-          onClick={clearSearch}
-          style={{
-            padding: "11px 12px",
-            borderRadius: 8,
-            background: "#fff",
-            color: "#38003c",
+            background: page === "search" ? "#38003c" : "#fff",
+            color: page === "search" ? "#fff" : "#38003c",
             border: "2px solid #38003c",
             cursor: "pointer",
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 700,
           }}
         >
-          Clear
+          🔍 Search
+        </button>
+        <button
+          onClick={() => setPage("myteam")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 8,
+            background: page === "myteam" ? "#38003c" : "#fff",
+            color: page === "myteam" ? "#fff" : "#38003c",
+            border: "2px solid #38003c",
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          👕 My Team
         </button>
       </div>
 
-      {loading && <p style={{ color: "#888" }}>Loading...</p>}
-      {players.map((p) => (
-        <PlayerRow key={p.id} player={p} />
-      ))}
+      {page === "search" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && searchPlayers()}
+              placeholder="Search player..."
+              style={{
+                flex: 1,
+                padding: "11px 14px",
+                borderRadius: 8,
+                border: "2px solid #e0e0e0",
+                fontSize: 15,
+                outline: "none",
+                minWidth: 0,
+              }}
+            />
+            <button
+              onClick={searchPlayers}
+              style={{
+                padding: "11px 16px",
+                borderRadius: 8,
+                background: "#38003c",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 700,
+              }}
+            >
+              Search
+            </button>
+            <button
+              onClick={clearSearch}
+              style={{
+                padding: "11px 12px",
+                borderRadius: 8,
+                background: "#fff",
+                color: "#38003c",
+                border: "2px solid #38003c",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 700,
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          {loading && <p style={{ color: "#888" }}>Loading...</p>}
+          {players.map((p) => (
+            <PlayerRow key={p.id} player={p} />
+          ))}
+        </>
+      )}
+
+      {page === "myteam" && <MyTeam />}
     </div>
   );
 }
