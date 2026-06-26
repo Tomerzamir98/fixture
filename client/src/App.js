@@ -66,7 +66,167 @@ const calcBreakdown = (f, position) => {
   return lines;
 };
 
-function PlayerRow({ player }) {
+function CompareTable({ players, onClose }) {
+  const [recs, setRecs] = useState({});
+
+  useState(() => {
+    players.forEach(async (p) => {
+      try {
+        const res = await fetch(`${API}/api/players/${p.id}/recommendation`);
+        const data = await res.json();
+        setRecs((prev) => ({ ...prev, [p.id]: data }));
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  }, []);
+
+  const recColor = (r) =>
+    r === "START" ? "#00985f" : r === "CONSIDER" ? "#d4a017" : "#c0392b";
+  const recLabel = (r) =>
+    r === "START" ? "✅ START" : r === "CONSIDER" ? "⚠️ CONSIDER" : "❌ BENCH";
+
+  const rows = [
+    { label: "Position", key: (p) => POSITION_MAP[p.position] },
+    { label: "Price", key: (p) => `£${p.price}m` },
+    { label: "Total pts", key: (p) => `${p.totalPoints}pts` },
+    {
+      label: "Next match",
+      key: (p) =>
+        recs[p.id]
+          ? `vs ${TEAM_MAP[recs[p.id].opponent]} ${recs[p.id].isHome ? "🏠" : "✈️"}`
+          : "—",
+    },
+    {
+      label: "Recommendation",
+      key: (p) => (recs[p.id] ? recLabel(recs[p.id].recommendation) : "—"),
+      color: (p) => (recs[p.id] ? recColor(recs[p.id].recommendation) : "#888"),
+    },
+    {
+      label: "Avg vs opponent",
+      key: (p) =>
+        recs[p.id]
+          ? `${recs[p.id].avgPoints} pts (${recs[p.id].gamesVs} games)`
+          : "—",
+    },
+    {
+      label: "Form avg (last 5)",
+      key: (p) => (recs[p.id] ? `${recs[p.id].formAvg} pts` : "—"),
+    },
+    {
+      label: "Score",
+      key: (p) => (recs[p.id] ? `${recs[p.id].score}/100` : "—"),
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        marginTop: 24,
+        borderRadius: 12,
+        border: "2px solid #38003c",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          background: "#38003c",
+          color: "#fff",
+          padding: "12px 16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <strong style={{ fontSize: 15 }}>⚖️ Player Comparison</strong>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: 18,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table
+          style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}
+        >
+          <thead>
+            <tr style={{ background: "#f5eef8" }}>
+              <th
+                style={{
+                  padding: "10px 14px",
+                  textAlign: "left",
+                  fontWeight: 700,
+                  color: "#38003c",
+                  borderBottom: "1px solid #e0e0e0",
+                  minWidth: 130,
+                }}
+              ></th>
+              {players.map((p) => (
+                <th
+                  key={p.id}
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#38003c",
+                    borderBottom: "1px solid #e0e0e0",
+                    minWidth: 120,
+                  }}
+                >
+                  {p.name.split(" ").slice(-1)[0]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr
+                key={i}
+                style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}
+              >
+                <td
+                  style={{
+                    padding: "10px 14px",
+                    fontWeight: 600,
+                    color: "#555",
+                    borderBottom: "1px solid #f0f0f0",
+                  }}
+                >
+                  {row.label}
+                </td>
+                {players.map((p) => (
+                  <td
+                    key={p.id}
+                    style={{
+                      padding: "10px 14px",
+                      textAlign: "center",
+                      borderBottom: "1px solid #f0f0f0",
+                      background: row.color ? row.color(p) : "transparent",
+                      color: row.color ? "#fff" : "#333",
+                      fontWeight: row.color ? 700 : 400,
+                      borderRadius: row.color ? 6 : 0,
+                    }}
+                  >
+                    {row.key(p)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PlayerRow({ player, onAddCompare, inCompare }) {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [rec, setRec] = useState(null);
@@ -165,6 +325,24 @@ function PlayerRow({ player }) {
             marginLeft: 8,
           }}
         >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddCompare(player);
+            }}
+            style={{
+              padding: "3px 8px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: "pointer",
+              background: inCompare ? "#38003c" : "#fff",
+              color: inCompare ? "#fff" : "#38003c",
+              border: "1.5px solid #38003c",
+            }}
+          >
+            {inCompare ? "✓ Added" : "+ Compare"}
+          </button>
           <span style={{ fontSize: 12, color: "#333", fontWeight: 600 }}>
             {player.totalPoints}pts
           </span>
@@ -600,6 +778,8 @@ export default function App() {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [comparePlayers, setComparePlayers] = useState([]);
+  const [showCompare, setShowCompare] = useState(false);
 
   const clearSearch = () => {
     setSearch("");
@@ -654,6 +834,16 @@ export default function App() {
     setSuggestions([]);
     setShowDropdown(false);
   };
+
+  const toggleCompare = (player) => {
+    if (comparePlayers.find((p) => p.id === player.id)) {
+      setComparePlayers(comparePlayers.filter((p) => p.id !== player.id));
+    } else if (comparePlayers.length < 4) {
+      setComparePlayers([...comparePlayers, player]);
+    }
+  };
+
+  const displayedPlayers = selectedPlayer ? [selectedPlayer] : results;
 
   return (
     <div
@@ -829,11 +1019,108 @@ export default function App() {
 
           {loading && <p style={{ color: "#888" }}>Loading...</p>}
 
-          {selectedPlayer && (
-            <PlayerRow key={selectedPlayer.id} player={selectedPlayer} />
+          {displayedPlayers.map((p) => (
+            <PlayerRow
+              key={p.id}
+              player={p}
+              onAddCompare={toggleCompare}
+              inCompare={!!comparePlayers.find((c) => c.id === p.id)}
+            />
+          ))}
+
+          {/* Compare Bar */}
+          {comparePlayers.length > 0 && (
+            <div
+              style={{
+                position: "fixed",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: "#38003c",
+                color: "#fff",
+                padding: "12px 20px",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                zIndex: 200,
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 700 }}>⚖️ Compare:</span>
+              {comparePlayers.map((p) => (
+                <span
+                  key={p.id}
+                  style={{
+                    background: "rgba(255,255,255,0.2)",
+                    padding: "4px 10px",
+                    borderRadius: 20,
+                    fontSize: 12,
+                  }}
+                >
+                  {p.name.split(" ").slice(-1)[0]}
+                  <button
+                    onClick={() => toggleCompare(p)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#fff",
+                      cursor: "pointer",
+                      marginLeft: 4,
+                      fontSize: 12,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              {comparePlayers.length >= 2 && (
+                <button
+                  onClick={() => setShowCompare(!showCompare)}
+                  style={{
+                    marginLeft: "auto",
+                    padding: "6px 16px",
+                    borderRadius: 8,
+                    background: "#fff",
+                    color: "#38003c",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                >
+                  {showCompare ? "Hide" : "Compare →"}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setComparePlayers([]);
+                  setShowCompare(false);
+                }}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Clear all
+              </button>
+            </div>
           )}
-          {!selectedPlayer &&
-            results.map((p) => <PlayerRow key={p.id} player={p} />)}
+
+          {showCompare && comparePlayers.length >= 2 && (
+            <div style={{ marginBottom: comparePlayers.length > 0 ? 80 : 0 }}>
+              <CompareTable
+                players={comparePlayers}
+                onClose={() => setShowCompare(false)}
+              />
+            </div>
+          )}
+
+          {comparePlayers.length > 0 && <div style={{ height: 70 }} />}
         </>
       )}
 
