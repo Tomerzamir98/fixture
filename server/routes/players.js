@@ -189,4 +189,28 @@ router.get("/team/:teamId/:gw", async (req, res) => {
   }
 });
 
+// GET /api/price-tracker
+router.get("/price-tracker", async (req, res) => {
+  try {
+    const data = await getBootstrap();
+    const players = data.elements.map((p) => ({
+      id: p.id,
+      name: `${p.first_name} ${p.second_name}`,
+      position: p.element_type,
+      price: p.now_cost / 10,
+      transfersIn: p.transfers_in_event,
+      transfersOut: p.transfers_out_event,
+      net: p.transfers_in_event - p.transfers_out_event,
+    }));
+
+    const sorted = players
+      .filter((p) => Math.abs(p.net) > 1000)
+      .sort((a, b) => b.net - a.net);
+
+    res.json(sorted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

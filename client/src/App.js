@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:3001";
 
@@ -66,8 +66,245 @@ const calcBreakdown = (f, position) => {
   return lines;
 };
 
-function CompareTable({ players, onClose }) {
+const theme = (dark) => ({
+  bg: dark ? "#0f0f0f" : "#f4f4f4",
+  card: dark ? "#1a1a1a" : "#fff",
+  cardOpen: dark ? "#1e1224" : "#f5eef8",
+  bg2: dark ? "#222" : "#fafafa",
+  border: dark ? "#333" : "#e0e0e0",
+  border2: dark ? "#444" : "#ececec",
+  text: dark ? "#f0f0f0" : "#333",
+  text2: dark ? "#aaa" : "#666",
+  text3: dark ? "#666" : "#888",
+  inputBg: dark ? "#1a1a1a" : "#fff",
+  dropdownBg: dark ? "#1a1a1a" : "#fff",
+  dropdownHover: dark ? "#2a1a2e" : "#f5eef8",
+  tableHeader: dark ? "#1e1224" : "#f5eef8",
+  tableBg1: dark ? "#1a1a1a" : "#fff",
+  tableBg2: dark ? "#141414" : "#fafafa",
+  navActive: "#38003c",
+  navInactiveColor: dark ? "#a78bfa" : "#38003c",
+  navBorder: dark ? "#a78bfa" : "#38003c",
+});
+
+function PriceTracker({ dark }) {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [view, setView] = useState("rise"); // rise or fall
+  const t = theme(dark);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/api/players/price-tracker`);
+        const data = await res.json();
+        setPlayers(data);
+      } catch (err) {
+        console.error(err);
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const filtered = players
+    .filter((p) => filter === "all" || p.position === parseInt(filter))
+    .filter((p) => (view === "rise" ? p.net > 0 : p.net < 0))
+    .slice(0, 20);
+
+  const formatNet = (n) =>
+    n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString();
+
+  return (
+    <div>
+      <p style={{ fontSize: 12, color: t.text3, marginBottom: 16 }}>
+        📊 Based on this GW's transfer activity. Players with high net transfers
+        are likely to rise in price.
+      </p>
+
+      {/* Filters */}
+      <div
+        style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
+      >
+        <div style={{ display: "flex", gap: 6 }}>
+          {["all", "1", "2", "3", "4"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                padding: "5px 10px",
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                border: `1.5px solid ${t.navBorder}`,
+                background: filter === f ? t.navActive : "transparent",
+                color: filter === f ? "#fff" : t.navInactiveColor,
+              }}
+            >
+              {f === "all" ? "All" : POSITION_MAP[parseInt(f)]}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+          <button
+            onClick={() => setView("rise")}
+            style={{
+              padding: "5px 12px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid #00985f",
+              background: view === "rise" ? "#00985f" : "transparent",
+              color: view === "rise" ? "#fff" : "#00985f",
+            }}
+          >
+            📈 Rising
+          </button>
+          <button
+            onClick={() => setView("fall")}
+            style={{
+              padding: "5px 12px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid #c0392b",
+              background: view === "fall" ? "#c0392b" : "transparent",
+              color: view === "fall" ? "#fff" : "#c0392b",
+            }}
+          >
+            📉 Falling
+          </button>
+        </div>
+      </div>
+
+      {loading && <p style={{ color: t.text3 }}>Loading...</p>}
+
+      {!loading && filtered.length === 0 && (
+        <p style={{ color: t.text3, fontSize: 14 }}>
+          No data available for this GW yet.
+        </p>
+      )}
+
+      {!loading &&
+        filtered.map((p, i) => {
+          const isRise = p.net > 0;
+          const barWidth = Math.min((Math.abs(p.net) / 100000) * 100, 100);
+
+          return (
+            <div
+              key={p.id}
+              style={{
+                marginBottom: 10,
+                borderRadius: 10,
+                border: `1.5px solid ${t.border}`,
+                background: t.card,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ padding: "12px 14px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: t.text3,
+                        fontWeight: 700,
+                        minWidth: 20,
+                      }}
+                    >
+                      #{i + 1}
+                    </span>
+                    <strong style={{ fontSize: 14, color: t.text }}>
+                      {p.name}
+                    </strong>
+                    <span
+                      style={{
+                        background: "#38003c",
+                        color: "#fff",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 5px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      {POSITION_MAP[p.position]}
+                    </span>
+                  </div>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 12 }}
+                  >
+                    <span style={{ fontSize: 13, color: t.text2 }}>
+                      £{p.price}m
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: isRise ? "#00985f" : "#c0392b",
+                      }}
+                    >
+                      {isRise ? "↑" : "↓"} {formatNet(p.net)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div
+                  style={{
+                    background: t.border,
+                    borderRadius: 4,
+                    height: 6,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 4,
+                      width: `${barWidth}%`,
+                      background: isRise ? "#00985f" : "#c0392b",
+                      transition: "width 0.3s",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 6,
+                    fontSize: 11,
+                    color: t.text3,
+                  }}
+                >
+                  <span>🟢 In: {p.transfersIn.toLocaleString()}</span>
+                  <span>🔴 Out: {p.transfersOut.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+function CompareTable({ players, onClose, dark }) {
   const [recs, setRecs] = useState({});
+  const t = theme(dark);
 
   useState(() => {
     players.forEach(async (p) => {
@@ -157,14 +394,14 @@ function CompareTable({ players, onClose }) {
           style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}
         >
           <thead>
-            <tr style={{ background: "#f5eef8" }}>
+            <tr style={{ background: t.tableHeader }}>
               <th
                 style={{
                   padding: "10px 14px",
                   textAlign: "left",
                   fontWeight: 700,
                   color: "#38003c",
-                  borderBottom: "1px solid #e0e0e0",
+                  borderBottom: `1px solid ${t.border}`,
                   minWidth: 130,
                 }}
               ></th>
@@ -176,7 +413,7 @@ function CompareTable({ players, onClose }) {
                     textAlign: "center",
                     fontWeight: 700,
                     color: "#38003c",
-                    borderBottom: "1px solid #e0e0e0",
+                    borderBottom: `1px solid ${t.border}`,
                     minWidth: 120,
                   }}
                 >
@@ -189,14 +426,14 @@ function CompareTable({ players, onClose }) {
             {rows.map((row, i) => (
               <tr
                 key={i}
-                style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}
+                style={{ background: i % 2 === 0 ? t.tableBg1 : t.tableBg2 }}
               >
                 <td
                   style={{
                     padding: "10px 14px",
                     fontWeight: 600,
-                    color: "#555",
-                    borderBottom: "1px solid #f0f0f0",
+                    color: t.text2,
+                    borderBottom: `1px solid ${t.border2}`,
                   }}
                 >
                   {row.label}
@@ -207,11 +444,10 @@ function CompareTable({ players, onClose }) {
                     style={{
                       padding: "10px 14px",
                       textAlign: "center",
-                      borderBottom: "1px solid #f0f0f0",
+                      borderBottom: `1px solid ${t.border2}`,
                       background: row.color ? row.color(p) : "transparent",
-                      color: row.color ? "#fff" : "#333",
+                      color: row.color ? "#fff" : t.text,
                       fontWeight: row.color ? 700 : 400,
-                      borderRadius: row.color ? 6 : 0,
                     }}
                   >
                     {row.key(p)}
@@ -226,11 +462,12 @@ function CompareTable({ players, onClose }) {
   );
 }
 
-function PlayerRow({ player, onAddCompare, inCompare }) {
+function PlayerRow({ player, onAddCompare, inCompare, dark }) {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [rec, setRec] = useState(null);
   const [loading, setLoading] = useState(false);
+  const t = theme(dark);
 
   const toggle = async () => {
     if (!open && history.length === 0) {
@@ -270,11 +507,11 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
       style={{
         marginBottom: 12,
         borderRadius: 12,
-        border: `2px solid ${open ? "#38003c" : "#e0e0e0"}`,
+        border: `2px solid ${open ? "#38003c" : t.border}`,
         overflow: "hidden",
         boxShadow: open
-          ? "0 4px 16px rgba(56,0,60,0.10)"
-          : "0 1px 4px rgba(0,0,0,0.05)",
+          ? "0 4px 16px rgba(56,0,60,0.15)"
+          : "0 1px 4px rgba(0,0,0,0.08)",
       }}
     >
       <div
@@ -282,7 +519,7 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
         style={{
           padding: "12px 14px",
           cursor: "pointer",
-          background: open ? "#f5eef8" : "#fff",
+          background: open ? t.cardOpen : t.card,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -298,6 +535,7 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              color: t.text,
             }}
           >
             {player.name}
@@ -336,17 +574,17 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
               fontSize: 11,
               fontWeight: 700,
               cursor: "pointer",
-              background: inCompare ? "#38003c" : "#fff",
-              color: inCompare ? "#fff" : "#38003c",
-              border: "1.5px solid #38003c",
+              background: inCompare ? "#38003c" : "transparent",
+              color: inCompare ? "#fff" : t.navInactiveColor,
+              border: `1.5px solid ${t.navBorder}`,
             }}
           >
             {inCompare ? "✓ Added" : "+ Compare"}
           </button>
-          <span style={{ fontSize: 12, color: "#333", fontWeight: 600 }}>
+          <span style={{ fontSize: 12, color: t.text, fontWeight: 600 }}>
             {player.totalPoints}pts
           </span>
-          <span style={{ fontSize: 12, color: "#666" }}>£{player.price}m</span>
+          <span style={{ fontSize: 12, color: t.text2 }}>£{player.price}m</span>
           <span style={{ fontSize: 14, color: "#38003c" }}>
             {open ? "▲" : "▼"}
           </span>
@@ -357,11 +595,13 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
         <div
           style={{
             padding: "14px 12px 16px",
-            background: "#fafafa",
-            borderTop: "1px solid #ececec",
+            background: t.bg2,
+            borderTop: `1px solid ${t.border2}`,
           }}
         >
-          {loading && <p style={{ color: "#888", fontSize: 14 }}>Loading...</p>}
+          {loading && (
+            <p style={{ color: t.text3, fontSize: 14 }}>Loading...</p>
+          )}
           {!loading && rec && (
             <div
               style={{
@@ -404,7 +644,7 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
             </div>
           )}
           {!loading && history.length === 0 && (
-            <p style={{ color: "#aaa", fontSize: 14 }}>No data found.</p>
+            <p style={{ color: t.text3, fontSize: 14 }}>No data found.</p>
           )}
           {!loading && history.length > 0 && (
             <div
@@ -427,8 +667,8 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
                       flex: "0 0 100px",
                       borderRadius: 10,
                       overflow: "hidden",
-                      border: "1px solid #e0e0e0",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                      border: `1px solid ${t.border}`,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
                     }}
                   >
                     <div
@@ -469,7 +709,7 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
                     </div>
                     <div
                       style={{
-                        background: "#fff",
+                        background: t.card,
                         padding: "8px 8px",
                         minHeight: 40,
                       }}
@@ -478,7 +718,7 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
                         <div
                           style={{
                             fontSize: 11,
-                            color: "#bbb",
+                            color: t.text3,
                             textAlign: "center",
                             paddingTop: 6,
                           }}
@@ -491,7 +731,7 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
                             key={j}
                             style={{
                               fontSize: 10,
-                              color: "#333",
+                              color: t.text,
                               marginBottom: 4,
                               lineHeight: 1.4,
                             }}
@@ -512,10 +752,11 @@ function PlayerRow({ player, onAddCompare, inCompare }) {
   );
 }
 
-function TeamCard({ player }) {
+function TeamCard({ player, dark }) {
   const [rec, setRec] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const t = theme(dark);
 
   const load = async () => {
     if (loaded) return;
@@ -553,8 +794,8 @@ function TeamCard({ player }) {
       style={{
         padding: "12px 14px",
         borderRadius: 10,
-        border: `2px solid ${player.isCaptain ? "#f4a700" : player.isViceCaptain ? "#aaa" : "#e0e0e0"}`,
-        background: player.pickPosition > 11 ? "#f9f9f9" : "#fff",
+        border: `2px solid ${player.isCaptain ? "#f4a700" : player.isViceCaptain ? "#888" : t.border}`,
+        background: player.pickPosition > 11 ? t.bg2 : t.card,
         marginBottom: 8,
         opacity: player.pickPosition > 11 ? 0.7 : 1,
       }}
@@ -599,8 +840,8 @@ function TeamCard({ player }) {
             <span
               style={{
                 fontSize: 11,
-                background: "#ccc",
-                color: "#555",
+                background: "#555",
+                color: "#ccc",
                 padding: "1px 5px",
                 borderRadius: 4,
                 fontWeight: 700,
@@ -609,7 +850,7 @@ function TeamCard({ player }) {
               BENCH
             </span>
           )}
-          <strong style={{ fontSize: 14 }}>{player.name}</strong>
+          <strong style={{ fontSize: 14, color: t.text }}>{player.name}</strong>
           <span
             style={{
               background: "#38003c",
@@ -623,11 +864,11 @@ function TeamCard({ player }) {
             {POSITION_MAP[player.position]}
           </span>
         </div>
-        <div style={{ fontSize: 12, color: "#666" }}>£{player.price}m</div>
+        <div style={{ fontSize: 12, color: t.text2 }}>£{player.price}m</div>
       </div>
       <div style={{ marginTop: 8 }}>
         {loading && (
-          <span style={{ fontSize: 12, color: "#aaa" }}>Loading...</span>
+          <span style={{ fontSize: 12, color: t.text3 }}>Loading...</span>
         )}
         {rec && (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -643,7 +884,7 @@ function TeamCard({ player }) {
             >
               {recLabel}
             </span>
-            <span style={{ fontSize: 11, color: "#666" }}>
+            <span style={{ fontSize: 11, color: t.text2 }}>
               vs {TEAM_MAP[rec.opponent]} {rec.isHome ? "🏠" : "✈️"} · avg{" "}
               {rec.avgPoints} pts ({rec.gamesVs} games)
             </span>
@@ -654,12 +895,13 @@ function TeamCard({ player }) {
   );
 }
 
-function MyTeam() {
+function MyTeam({ dark }) {
   const [teamId, setTeamId] = useState("");
   const [gw, setGw] = useState("38");
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const t = theme(dark);
 
   const loadTeam = async () => {
     if (!teamId) return;
@@ -696,9 +938,11 @@ function MyTeam() {
             minWidth: 180,
             padding: "11px 14px",
             borderRadius: 8,
-            border: "2px solid #e0e0e0",
+            border: `2px solid ${t.border}`,
             fontSize: 14,
             outline: "none",
+            background: t.inputBg,
+            color: t.text,
           }}
         />
         <input
@@ -709,9 +953,11 @@ function MyTeam() {
             width: 70,
             padding: "11px 10px",
             borderRadius: 8,
-            border: "2px solid #e0e0e0",
+            border: `2px solid ${t.border}`,
             fontSize: 14,
             outline: "none",
+            background: t.inputBg,
+            color: t.text,
           }}
         />
         <button
@@ -731,10 +977,10 @@ function MyTeam() {
         </button>
       </div>
       {error && <p style={{ color: "#c0392b", fontSize: 14 }}>{error}</p>}
-      {loading && <p style={{ color: "#888" }}>Loading team...</p>}
+      {loading && <p style={{ color: t.text3 }}>Loading team...</p>}
       {team && (
         <div>
-          <p style={{ fontSize: 12, color: "#888", marginBottom: 16 }}>
+          <p style={{ fontSize: 12, color: t.text3, marginBottom: 16 }}>
             💡 Find your Team ID in the URL of your FPL team page
           </p>
           <h3
@@ -748,13 +994,13 @@ function MyTeam() {
             ⬆️ Starting XI
           </h3>
           {starters.map((p) => (
-            <TeamCard key={p.id} player={p} />
+            <TeamCard key={p.id} player={p} dark={dark} />
           ))}
           <h3
             style={{
               fontSize: 14,
               fontWeight: 700,
-              color: "#888",
+              color: t.text2,
               marginBottom: 10,
               marginTop: 16,
             }}
@@ -762,7 +1008,7 @@ function MyTeam() {
             🪑 Bench
           </h3>
           {bench.map((p) => (
-            <TeamCard key={p.id} player={p} />
+            <TeamCard key={p.id} player={p} dark={dark} />
           ))}
         </div>
       )}
@@ -771,6 +1017,7 @@ function MyTeam() {
 }
 
 export default function App() {
+  const [dark, setDark] = useState(false);
   const [page, setPage] = useState("search");
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -780,6 +1027,12 @@ export default function App() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [comparePlayers, setComparePlayers] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
+  const t = theme(dark);
+
+  useEffect(() => {
+    document.body.style.background = t.bg;
+    document.body.style.margin = "0";
+  }, [dark, t.bg]);
 
   const clearSearch = () => {
     setSearch("");
@@ -845,286 +1098,326 @@ export default function App() {
 
   const displayedPlayers = selectedPlayer ? [selectedPlayer] : results;
 
+  const navBtn = (id, label) => (
+    <button
+      key={id}
+      onClick={() => setPage(id)}
+      style={{
+        padding: "8px 14px",
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: "pointer",
+        background: page === id ? t.navActive : "transparent",
+        color: page === id ? "#fff" : t.navInactiveColor,
+        border: `2px solid ${t.navBorder}`,
+      }}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div
       style={{
         fontFamily: "'Segoe UI', sans-serif",
-        maxWidth: 860,
-        margin: "0 auto",
-        padding: "20px 16px",
+        background: t.bg,
+        minHeight: "100vh",
       }}
     >
-      <div style={{ marginBottom: 20 }}>
-        <h1
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "20px 16px" }}>
+        <div
           style={{
-            fontSize: 28,
-            fontWeight: 800,
-            marginBottom: 2,
-            color: "#38003c",
-            letterSpacing: -1,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 20,
           }}
         >
-          ⚽ FIXTURE
-        </h1>
-        <p style={{ color: "#888", fontSize: 13, margin: 0 }}>
-          FPL Fixture Analyzer
-        </p>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        <button
-          onClick={() => setPage("search")}
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            background: page === "search" ? "#38003c" : "#fff",
-            color: page === "search" ? "#fff" : "#38003c",
-            border: "2px solid #38003c",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          🔍 Search
-        </button>
-        <button
-          onClick={() => setPage("myteam")}
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            background: page === "myteam" ? "#38003c" : "#fff",
-            color: page === "myteam" ? "#fff" : "#38003c",
-            border: "2px solid #38003c",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          👕 My Team
-        </button>
-      </div>
-
-      {page === "search" && (
-        <>
-          <div style={{ position: "relative", marginBottom: 20 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                value={search}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSearch(val);
-                  setSelectedPlayer(null);
-                  setResults([]);
-                  clearTimeout(window._searchTimer);
-                  window._searchTimer = setTimeout(
-                    () => fetchSuggestions(val),
-                    300,
-                  );
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") searchAll();
-                }}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
-                placeholder="Search player (e.g. Salah, Haaland...)"
-                style={{
-                  flex: 1,
-                  padding: "11px 14px",
-                  borderRadius: 8,
-                  border: "2px solid #e0e0e0",
-                  fontSize: 15,
-                  outline: "none",
-                  minWidth: 0,
-                }}
-              />
-              <button
-                onClick={clearSearch}
-                style={{
-                  padding: "11px 12px",
-                  borderRadius: 8,
-                  background: "#fff",
-                  color: "#38003c",
-                  border: "2px solid #38003c",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                Clear
-              </button>
-            </div>
-
-            {showDropdown && suggestions.length > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "#fff",
-                  border: "2px solid #e0e0e0",
-                  borderRadius: 8,
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-                  zIndex: 100,
-                  overflow: "hidden",
-                  marginTop: 4,
-                }}
-              >
-                {suggestions.map((p) => (
-                  <div
-                    key={p.id}
-                    onMouseDown={() => selectPlayer(p)}
-                    style={{
-                      padding: "10px 14px",
-                      cursor: "pointer",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      borderBottom: "1px solid #f0f0f0",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#f5eef8")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "#fff")
-                    }
-                  >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>
-                        {p.name}
-                      </span>
-                      <span
-                        style={{
-                          background: "#38003c",
-                          color: "#fff",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          padding: "2px 5px",
-                          borderRadius: 4,
-                        }}
-                      >
-                        {POSITION_MAP[p.position]}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 12, color: "#888" }}>
-                      £{p.price}m · {p.totalPoints}pts
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {loading && <p style={{ color: "#888" }}>Loading...</p>}
-
-          {displayedPlayers.map((p) => (
-            <PlayerRow
-              key={p.id}
-              player={p}
-              onAddCompare={toggleCompare}
-              inCompare={!!comparePlayers.find((c) => c.id === p.id)}
-            />
-          ))}
-
-          {/* Compare Bar */}
-          {comparePlayers.length > 0 && (
-            <div
+          <div>
+            <h1
               style={{
-                position: "fixed",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: "#38003c",
-                color: "#fff",
-                padding: "12px 20px",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                zIndex: 200,
-                flexWrap: "wrap",
+                fontSize: 28,
+                fontWeight: 800,
+                marginBottom: 2,
+                color: "#38003c",
+                letterSpacing: -1,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700 }}>⚖️ Compare:</span>
-              {comparePlayers.map((p) => (
-                <span
-                  key={p.id}
-                  style={{
-                    background: "rgba(255,255,255,0.2)",
-                    padding: "4px 10px",
-                    borderRadius: 20,
-                    fontSize: 12,
+              ⚽ FIXTURE
+            </h1>
+            <p style={{ color: t.text3, fontSize: 13, margin: 0 }}>
+              FPL Fixture Analyzer
+            </p>
+          </div>
+          <button
+            onClick={() => setDark(!dark)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              cursor: "pointer",
+              fontSize: 18,
+            }}
+          >
+            {dark ? "☀️" : "🌙"}
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 24,
+            flexWrap: "wrap",
+          }}
+        >
+          {navBtn("search", "🔍 Search")}
+          {navBtn("myteam", "👕 My Team")}
+          {navBtn("tracker", "📈 Price Tracker")}
+        </div>
+
+        {page === "search" && (
+          <>
+            <div style={{ position: "relative", marginBottom: 20 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={search}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearch(val);
+                    setSelectedPlayer(null);
+                    setResults([]);
+                    clearTimeout(window._searchTimer);
+                    window._searchTimer = setTimeout(
+                      () => fetchSuggestions(val),
+                      300,
+                    );
                   }}
-                >
-                  {p.name.split(" ").slice(-1)[0]}
-                  <button
-                    onClick={() => toggleCompare(p)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#fff",
-                      cursor: "pointer",
-                      marginLeft: 4,
-                      fontSize: 12,
-                    }}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-              {comparePlayers.length >= 2 && (
-                <button
-                  onClick={() => setShowCompare(!showCompare)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") searchAll();
+                  }}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                  onFocus={() =>
+                    suggestions.length > 0 && setShowDropdown(true)
+                  }
+                  placeholder="Search player (e.g. Salah, Haaland...)"
                   style={{
-                    marginLeft: "auto",
-                    padding: "6px 16px",
+                    flex: 1,
+                    padding: "11px 14px",
                     borderRadius: 8,
-                    background: "#fff",
-                    color: "#38003c",
-                    border: "none",
+                    border: `2px solid ${t.border}`,
+                    fontSize: 15,
+                    outline: "none",
+                    minWidth: 0,
+                    background: t.inputBg,
+                    color: t.text,
+                  }}
+                />
+                <button
+                  onClick={clearSearch}
+                  style={{
+                    padding: "11px 12px",
+                    borderRadius: 8,
+                    background: "transparent",
+                    color: t.navInactiveColor,
+                    border: `2px solid ${t.navBorder}`,
                     cursor: "pointer",
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: 700,
                   }}
                 >
-                  {showCompare ? "Hide" : "Compare →"}
+                  Clear
                 </button>
+              </div>
+
+              {showDropdown && suggestions.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    background: t.dropdownBg,
+                    border: `2px solid ${t.border}`,
+                    borderRadius: 8,
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+                    zIndex: 100,
+                    overflow: "hidden",
+                    marginTop: 4,
+                  }}
+                >
+                  {suggestions.map((p) => (
+                    <div
+                      key={p.id}
+                      onMouseDown={() => selectPlayer(p)}
+                      style={{
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: `1px solid ${t.border2}`,
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = t.dropdownHover)
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = t.dropdownBg)
+                      }
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                            color: t.text,
+                          }}
+                        >
+                          {p.name}
+                        </span>
+                        <span
+                          style={{
+                            background: "#38003c",
+                            color: "#fff",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 5px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          {POSITION_MAP[p.position]}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 12, color: t.text3 }}>
+                        £{p.price}m · {p.totalPoints}pts
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
-              <button
-                onClick={() => {
-                  setComparePlayers([]);
-                  setShowCompare(false);
-                }}
+            </div>
+
+            {loading && <p style={{ color: t.text3 }}>Loading...</p>}
+
+            {displayedPlayers.map((p) => (
+              <PlayerRow
+                key={p.id}
+                player={p}
+                onAddCompare={toggleCompare}
+                inCompare={!!comparePlayers.find((c) => c.id === p.id)}
+                dark={dark}
+              />
+            ))}
+
+            {comparePlayers.length > 0 && (
+              <div
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.15)",
+                  position: "fixed",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: "#38003c",
                   color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
+                  padding: "12px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  zIndex: 200,
+                  flexWrap: "wrap",
                 }}
               >
-                Clear all
-              </button>
-            </div>
-          )}
+                <span style={{ fontSize: 13, fontWeight: 700 }}>
+                  ⚖️ Compare:
+                </span>
+                {comparePlayers.map((p) => (
+                  <span
+                    key={p.id}
+                    style={{
+                      background: "rgba(255,255,255,0.2)",
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                    }}
+                  >
+                    {p.name.split(" ").slice(-1)[0]}
+                    <button
+                      onClick={() => toggleCompare(p)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#fff",
+                        cursor: "pointer",
+                        marginLeft: 4,
+                        fontSize: 12,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+                {comparePlayers.length >= 2 && (
+                  <button
+                    onClick={() => setShowCompare(!showCompare)}
+                    style={{
+                      marginLeft: "auto",
+                      padding: "6px 16px",
+                      borderRadius: 8,
+                      background: "#fff",
+                      color: "#38003c",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {showCompare ? "Hide" : "Compare →"}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setComparePlayers([]);
+                    setShowCompare(false);
+                  }}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    background: "rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
-          {showCompare && comparePlayers.length >= 2 && (
-            <div style={{ marginBottom: comparePlayers.length > 0 ? 80 : 0 }}>
-              <CompareTable
-                players={comparePlayers}
-                onClose={() => setShowCompare(false)}
-              />
-            </div>
-          )}
+            {showCompare && comparePlayers.length >= 2 && (
+              <div style={{ marginBottom: comparePlayers.length > 0 ? 80 : 0 }}>
+                <CompareTable
+                  players={comparePlayers}
+                  onClose={() => setShowCompare(false)}
+                  dark={dark}
+                />
+              </div>
+            )}
 
-          {comparePlayers.length > 0 && <div style={{ height: 70 }} />}
-        </>
-      )}
+            {comparePlayers.length > 0 && <div style={{ height: 70 }} />}
+          </>
+        )}
 
-      {page === "myteam" && <MyTeam />}
+        {page === "myteam" && <MyTeam dark={dark} />}
+        {page === "tracker" && <PriceTracker dark={dark} />}
+      </div>
     </div>
   );
 }
