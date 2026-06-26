@@ -27,6 +27,8 @@ const TEAM_MAP = {
   20: "WOL",
 };
 
+const sanitize = (str) => str.replace(/[^a-zA-Z\s'-]/g, "").slice(0, 50);
+
 const pointsColor = (pts) => {
   if (pts >= 9) return "#00985f";
   if (pts >= 6) return "#00b87a";
@@ -483,10 +485,13 @@ function MyTeam() {
 
   const loadTeam = async () => {
     if (!teamId) return;
+    const safeId = teamId.replace(/[^0-9]/g, "").slice(0, 10);
+    const safeGw = gw.replace(/[^0-9]/g, "").slice(0, 2);
+    if (!safeId || !safeGw) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/api/players/team/${teamId}/${gw}`);
+      const res = await fetch(`${API}/api/players/team/${safeId}/${safeGw}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setTeam(data);
@@ -506,7 +511,7 @@ function MyTeam() {
       >
         <input
           value={teamId}
-          onChange={(e) => setTeamId(e.target.value)}
+          onChange={(e) => setTeamId(e.target.value.replace(/[^0-9]/g, ""))}
           placeholder="FPL Team ID (e.g. 6359518)"
           style={{
             flex: 1,
@@ -520,7 +525,7 @@ function MyTeam() {
         />
         <input
           value={gw}
-          onChange={(e) => setGw(e.target.value)}
+          onChange={(e) => setGw(e.target.value.replace(/[^0-9]/g, ""))}
           placeholder="GW"
           style={{
             width: 70,
@@ -547,10 +552,8 @@ function MyTeam() {
           Load Team
         </button>
       </div>
-
       {error && <p style={{ color: "#c0392b", fontSize: 14 }}>{error}</p>}
       {loading && <p style={{ color: "#888" }}>Loading team...</p>}
-
       {team && (
         <div>
           <p style={{ fontSize: 12, color: "#888", marginBottom: 16 }}>
@@ -592,25 +595,64 @@ function MyTeam() {
 export default function App() {
   const [page, setPage] = useState("search");
   const [search, setSearch] = useState("");
-  const [players, setPlayers] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [results, setResults] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const clearSearch = () => {
     setSearch("");
-    setPlayers([]);
+    setSuggestions([]);
+    setResults([]);
+    setSelectedPlayer(null);
+    setShowDropdown(false);
   };
 
-  const searchPlayers = async () => {
-    if (!search) return;
-    setLoading(true);
+  const fetchSuggestions = async (value) => {
+    const term = sanitize(value);
+    if (!term || term.length < 2) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
     try {
-      const res = await fetch(`${API}/api/players?search=${search}`);
+      const res = await fetch(
+        `${API}/api/players?search=${encodeURIComponent(term)}`,
+      );
       const data = await res.json();
-      setPlayers(data);
+      setSuggestions(data.slice(0, 8));
+      setShowDropdown(true);
     } catch (err) {
-      console.error("Search error:", err);
+      console.error(err);
+    }
+  };
+
+  const searchAll = async () => {
+    const term = sanitize(search);
+    if (!term || term.length < 2) return;
+    setLoading(true);
+    setShowDropdown(false);
+    setSelectedPlayer(null);
+    setSuggestions([]);
+    try {
+      const res = await fetch(
+        `${API}/api/players?search=${encodeURIComponent(term)}`,
+      );
+      const data = await res.json();
+      setResults(data);
+    } catch (err) {
+      console.error(err);
     }
     setLoading(false);
+  };
+
+  const selectPlayer = (player) => {
+    setSearch(player.name);
+    setSelectedPlayer(player);
+    setResults([]);
+    setSuggestions([]);
+    setShowDropdown(false);
   };
 
   return (
@@ -639,7 +681,6 @@ export default function App() {
         </p>
       </div>
 
-      {/* Navigation */}
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         <button
           onClick={() => setPage("search")}
@@ -675,57 +716,124 @@ export default function App() {
 
       {page === "search" && (
         <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && searchPlayers()}
-              placeholder="Search player..."
-              style={{
-                flex: 1,
-                padding: "11px 14px",
-                borderRadius: 8,
-                border: "2px solid #e0e0e0",
-                fontSize: 15,
-                outline: "none",
-                minWidth: 0,
-              }}
-            />
-            <button
-              onClick={searchPlayers}
-              style={{
-                padding: "11px 16px",
-                borderRadius: 8,
-                background: "#38003c",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 700,
-              }}
-            >
-              Search
-            </button>
-            <button
-              onClick={clearSearch}
-              style={{
-                padding: "11px 12px",
-                borderRadius: 8,
-                background: "#fff",
-                color: "#38003c",
-                border: "2px solid #38003c",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 700,
-              }}
-            >
-              Clear
-            </button>
+          <div style={{ position: "relative", marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={search}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearch(val);
+                  setSelectedPlayer(null);
+                  setResults([]);
+                  clearTimeout(window._searchTimer);
+                  window._searchTimer = setTimeout(
+                    () => fetchSuggestions(val),
+                    300,
+                  );
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") searchAll();
+                }}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+                placeholder="Search player (e.g. Salah, Haaland...)"
+                style={{
+                  flex: 1,
+                  padding: "11px 14px",
+                  borderRadius: 8,
+                  border: "2px solid #e0e0e0",
+                  fontSize: 15,
+                  outline: "none",
+                  minWidth: 0,
+                }}
+              />
+              <button
+                onClick={clearSearch}
+                style={{
+                  padding: "11px 12px",
+                  borderRadius: 8,
+                  background: "#fff",
+                  color: "#38003c",
+                  border: "2px solid #38003c",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                Clear
+              </button>
+            </div>
+
+            {showDropdown && suggestions.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  background: "#fff",
+                  border: "2px solid #e0e0e0",
+                  borderRadius: 8,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                  zIndex: 100,
+                  overflow: "hidden",
+                  marginTop: 4,
+                }}
+              >
+                {suggestions.map((p) => (
+                  <div
+                    key={p.id}
+                    onMouseDown={() => selectPlayer(p)}
+                    style={{
+                      padding: "10px 14px",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1px solid #f0f0f0",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#f5eef8")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "#fff")
+                    }
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>
+                        {p.name}
+                      </span>
+                      <span
+                        style={{
+                          background: "#38003c",
+                          color: "#fff",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: "2px 5px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {POSITION_MAP[p.position]}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 12, color: "#888" }}>
+                      £{p.price}m · {p.totalPoints}pts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
           {loading && <p style={{ color: "#888" }}>Loading...</p>}
-          {players.map((p) => (
-            <PlayerRow key={p.id} player={p} />
-          ))}
+
+          {selectedPlayer && (
+            <PlayerRow key={selectedPlayer.id} player={selectedPlayer} />
+          )}
+          {!selectedPlayer &&
+            results.map((p) => <PlayerRow key={p.id} player={p} />)}
         </>
       )}
 
