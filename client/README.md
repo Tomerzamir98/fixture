@@ -1,6 +1,38 @@
-# Getting Started with Create React App
+# FPL Fixture Advisor — Client
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React (Create React App) frontend for the FPL (Fantasy Premier League) helper app. It lets you
+search players, view your team, track price changes, and get chip-usage advice, all backed by
+the Express API in `../server`.
+
+The UI is split by feature under `src/` — `App.js` is the top-level shell/nav, with one
+component per tab under `src/components/` (`ChipAdvisor`, `PriceTracker`, `CompareTable`,
+`PlayerRow`, `TeamCard`, `MyTeam`), plus shared `constants.js`, `theme.js`, and `utils.js`.
+See `../CLAUDE.md` for the full architecture writeup.
+
+## Features / tabs
+
+- **Search** — autocomplete player search with a sticky compare tray (select up to 4 players).
+- **My Team** — enter an FPL Team ID + gameweek to view your squad (starting XI + bench) with
+  per-player START/CONSIDER/BENCH recommendations.
+- **Price Tracker** — players with the biggest net transfer movement, filterable by position.
+- **Chip Advisor** — Wildcard / Bench Boost / Triple Captain / Free Hit recommendations for a
+  given Team ID + gameweek, including double/blank gameweek detection.
+- Dark mode toggle.
+
+## Running locally
+
+The API server must be running separately (it is not started by this app):
+
+```bash
+# from the repo root
+node ../server/index.js   # starts the API on http://localhost:3001
+
+# from client/
+npm start                 # starts this app on http://localhost:3000
+```
+
+By default the client calls `http://localhost:3001`. To point at a different API instance, set
+`REACT_APP_API_URL` (used in production via Vercel — see `.vercel/`).
 
 ## Available Scripts
 
@@ -8,63 +40,22 @@ In the project directory, you can run:
 
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Runs the app in development mode at [http://localhost:3000](http://localhost:3000). Reloads on
+changes.
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Launches the CRA test runner in interactive watch mode.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Builds a minified production bundle to the `build` folder.
 
 ### `npm run eject`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+One-way operation to copy CRA's build config (webpack, Babel, ESLint) into the project. Not
+needed for normal development.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app);
+see the [CRA documentation](https://facebook.github.io/create-react-app/docs/getting-started) for
+more on the underlying tooling.
