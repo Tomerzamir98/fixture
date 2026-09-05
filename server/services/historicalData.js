@@ -7,7 +7,7 @@ let cachedData = null;
 const loadHistoricalData = () => {
   if (cachedData) return cachedData;
 
-  const seasons = ["2022-23", "2023-24", "2024-25"];
+  const seasons = ["2022-23", "2023-24", "2024-25", "2025-26"];
   const allRows = [];
 
   for (const season of seasons) {

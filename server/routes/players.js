@@ -32,6 +32,19 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/players/current-gw
+router.get("/current-gw", async (req, res) => {
+  try {
+    const data = await getBootstrap();
+    const current = data.events.find((e) => e.is_current);
+    const next = data.events.find((e) => e.is_next);
+    const gw = current ? current.id : next ? next.id - 1 : 1;
+    res.json({ gw });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/players/price-tracker
 router.get("/price-tracker", async (req, res) => {
   try {

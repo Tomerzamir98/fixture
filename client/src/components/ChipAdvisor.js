@@ -1,14 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { API } from "../constants";
 import { theme } from "../theme";
 
 export function ChipAdvisor({ dark }) {
   const [teamId, setTeamId] = useState("");
-  const [gw, setGw] = useState("38");
+  const [gw, setGw] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const t = theme(dark);
+
+  useEffect(() => {
+    fetch("/api/current-gw")
+      .then((r) => r.json())
+      .then((d) => setGw(String(d.gw)))
+      .catch(() => setGw("1"));
+  }, []);
 
   const load = async () => {
     const safeId = teamId.replace(/[^0-9]/g, "").slice(0, 10);
