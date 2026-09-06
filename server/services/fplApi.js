@@ -4,6 +4,7 @@ const FPL_BASE = "https://fantasy.premierleague.com/api";
 
 // Cache
 const cache = {};
+const pending = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 דקות
 
 const cachedGet = async (url) => {
@@ -11,9 +12,19 @@ const cachedGet = async (url) => {
   if (cache[url] && now - cache[url].time < CACHE_TTL) {
     return cache[url].data;
   }
-  const res = await axios.get(url);
-  cache[url] = { data: res.data, time: now };
-  return res.data;
+  if (pending[url]) return pending[url];
+
+  pending[url] = axios
+    .get(url)
+    .then((res) => {
+      cache[url] = { data: res.data, time: Date.now() };
+      return res.data;
+    })
+    .finally(() => {
+      delete pending[url];
+    });
+
+  return pending[url];
 };
 
 const getBootstrap = async () => {
