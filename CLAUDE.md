@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 An FPL (Fantasy Premier League) helper app: a React client for browsing/searching players and a
-recommendation engine that blends live official-FPL-API data with 3 seasons of historical stats to
+recommendation engine that blends live official-FPL-API data with 4 seasons of historical stats to
 suggest who to start, captain, or bench.
 
 ## Commands
@@ -38,9 +38,9 @@ uses the root one. The client is a fully separate CRA app deployed to Vercel
 ### Server (`server/`)
 
 - `server/index.js` — Express app entry point; mounts everything under `/api/players`.
-- `server/routes/players.js` — single router with all 7 endpoints (player list/search,
-  price tracker, team-by-ID, chip advisor, player fixtures, player recommendation). This is
-  where the recommendation/scoring logic lives.
+- `server/routes/players.js` — single router with all 8 endpoints (player list/search,
+  price tracker, team-by-ID, chip advisor, player fixtures, player recommendation,
+  current-GW). This is where the recommendation/scoring logic lives.
 - `server/services/fplApi.js` — axios wrapper around the official FPL API
   (`https://fantasy.premierleague.com/api`), with a simple in-memory cache (5-minute TTL) keyed
   by URL. `getBootstrap()` is the core "all players/teams" payload most routes join against.
@@ -62,18 +62,21 @@ Boost/Triple Captain/Free Hit recommendations.
 
 ### Data (`data/`)
 
-Three CSVs (`merged_gw_2022-23.csv`, `merged_gw_2023-24.csv`, `merged_gw_2024-25.csv`), one per
-season, in the `vaastav/Fantasy-Premier-League` merged-gameweek format — per-player,
-per-fixture box scores (points, minutes, goals, assists, xG/xA, bonus, etc.). This is the
-source of truth for all historical (as opposed to live-API) stats.
+Four CSVs (`merged_gw_2022-23.csv`, `merged_gw_2023-24.csv`, `merged_gw_2024-25.csv`,
+`merged_gw_2025-26.csv`), one per season, in the `vaastav/Fantasy-Premier-League`
+merged-gameweek format — per-player, per-fixture box scores (points, minutes, goals, assists,
+xG/xA, bonus, etc.). This is the source of truth for all historical (as opposed to live-API)
+stats. To add a new season: download the CSV from vaastav's repo, add the season string to the
+`seasons` array in `server/services/historicalData.js`, and update `TEAM_MAP` in
+`client/src/constants.js`.
 
 ### Client (`client/src/`)
 
 Split by feature, one component per file — no Context/Redux, no react-router:
 
 - `constants.js` — `API` base URL (`REACT_APP_API_URL` or `http://localhost:3001`),
-  `POSITION_MAP` (1-4 → GK/DEF/MID/FWD), `TEAM_MAP` (1-20 → club codes). Update `TEAM_MAP`
-  each season as clubs change.
+  `POSITION_MAP` (1-4 → GK/DEF/MID/FWD), `TEAM_MAP` (1-20 → club codes). Updated for 2026-27
+  season (COV, HUL, LEE, SUN replaced WHU, WOL, SOU, LEI). Update each season as clubs change.
 - `theme.js` — `theme(dark)` returns a color-token object for light/dark mode; every component
   takes a `dark` prop and calls this itself rather than reading from Context. Dark-mode state
   lives only in the top-level `App` component and is threaded down via props.
