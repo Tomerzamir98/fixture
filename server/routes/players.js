@@ -141,8 +141,8 @@ router.get("/chip-advisor/:teamId/:gw", async (req, res) => {
       if (!el) return null;
       try {
         const summary = await getPlayerSummary(pick.element);
-        const nextMatch = summary.history[summary.history.length - 1];
-        if (!nextMatch)
+        const nextFixture = summary.fixtures[0];
+        if (!nextFixture)
           return {
             id: pick.element,
             name: `${el.first_name} ${el.second_name}`,
@@ -156,7 +156,9 @@ router.get("/chip-advisor/:teamId/:gw", async (req, res) => {
             formAvg: "0",
           };
 
-        const opponentId = nextMatch.opponent_team;
+        const opponentId = nextFixture.is_home
+          ? nextFixture.team_a
+          : nextFixture.team_h;
         const fullName = `${el.first_name} ${el.second_name}`;
         const vsHistorical = getPlayerVsOpponent(fullName, opponentId);
         const vsCurrent = summary.history.filter(
@@ -335,14 +337,38 @@ router.get("/:id/fixtures", async (req, res) => {
   }
 });
 
+// GET /api/players/:id/upcoming
+router.get("/:id/upcoming", async (req, res) => {
+  try {
+    const data = await getPlayerSummary(req.params.id);
+    const upcoming = data.fixtures.slice(0, 5).map((f) => ({
+      round: f.event,
+      opponent: f.is_home ? f.team_a : f.team_h,
+      isHome: f.is_home,
+      kickoffTime: f.kickoff_time,
+      difficulty: f.difficulty,
+    }));
+    res.json(upcoming);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/players/:id/recommendation
 router.get("/:id/recommendation", async (req, res) => {
   try {
     const data = await getPlayerSummary(req.params.id);
     const bootstrap = await getBootstrap();
 
-    const nextMatch = data.history[data.history.length - 1];
-    if (!nextMatch) return res.json(null);
+    const nextFixture = data.fixtures[0];
+    if (!nextFixture) return res.json(null);
+    const nextMatch = {
+      opponent_team: nextFixture.is_home
+        ? nextFixture.team_a
+        : nextFixture.team_h,
+      was_home: nextFixture.is_home,
+      round: nextFixture.event,
+    };
 
     const opponentId = nextMatch.opponent_team;
 

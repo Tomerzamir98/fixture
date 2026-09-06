@@ -7,6 +7,12 @@ export const pointsColor = (pts) => {
   return "#c0392b";
 };
 
+export const difficultyColor = (fdr) => {
+  if (fdr <= 2) return "#00985f";
+  if (fdr === 3) return "#d4a017";
+  return "#c0392b";
+};
+
 export const calcBreakdown = (f, position) => {
   const lines = [];
   if (f.minutes >= 60) lines.push("⏱ Played 60+ min · 2pts");

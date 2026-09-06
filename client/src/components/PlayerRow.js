@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { API, POSITION_MAP, TEAM_MAP } from "../constants";
 import { theme } from "../theme";
-import { calcBreakdown, pointsColor } from "../utils";
+import { calcBreakdown, pointsColor, difficultyColor } from "../utils";
 
 export function PlayerRow({ player, onAddCompare, inCompare, dark }) {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
   const [rec, setRec] = useState(null);
   const [loading, setLoading] = useState(false);
   const t = theme(dark);
@@ -14,13 +15,16 @@ export function PlayerRow({ player, onAddCompare, inCompare, dark }) {
     if (!open && history.length === 0) {
       setLoading(true);
       try {
-        const [histRes, recRes] = await Promise.all([
+        const [histRes, upcomingRes, recRes] = await Promise.all([
           fetch(`${API}/api/players/${player.id}/fixtures`),
+          fetch(`${API}/api/players/${player.id}/upcoming`),
           fetch(`${API}/api/players/${player.id}/recommendation`),
         ]);
         const histData = await histRes.json();
+        const upcomingData = await upcomingRes.json();
         const recData = await recRes.json();
         setHistory(histData);
+        setUpcoming(upcomingData);
         setRec(recData);
       } catch (err) {
         console.error(err);
@@ -180,6 +184,68 @@ export function PlayerRow({ player, onAddCompare, inCompare, dark }) {
                 <div style={{ fontSize: 11, opacity: 0.75, marginTop: 4 }}>
                   Score: {rec.score}/100
                 </div>
+              </div>
+            </div>
+          )}
+          {!loading && upcoming.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: t.text2,
+                  marginBottom: 8,
+                }}
+              >
+                🗓 Next {upcoming.length} Fixtures
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  overflowX: "auto",
+                  paddingBottom: 8,
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {upcoming.map((f, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      flex: "0 0 90px",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      border: `1px solid ${t.border}`,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+                      textAlign: "center",
+                      background: t.card,
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: difficultyColor(f.difficulty),
+                        color: "#fff",
+                        padding: "8px 6px",
+                      }}
+                    >
+                      <div
+                        style={{ fontSize: 11, fontWeight: 600, opacity: 0.85 }}
+                      >
+                        GW{f.round}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800 }}>
+                        {TEAM_MAP[f.opponent] || `T${f.opponent}`}{" "}
+                        {f.isHome ? "🏠" : "✈️"}
+                      </div>
+                    </div>
+                    <div style={{ padding: "6px 4px", fontSize: 11, color: t.text3 }}>
+                      {new Date(f.kickoffTime).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
