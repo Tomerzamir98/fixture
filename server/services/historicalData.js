@@ -19,10 +19,15 @@ const loadHistoricalData = () => {
     if (!fs.existsSync(filePath)) continue;
     const content = fs.readFileSync(filePath, "utf8");
     const rows = parse(content, { columns: true, skip_empty_lines: true });
-    rows.forEach((r) => {
-      r.season = season;
-    });
-    allRows.push(...rows);
+    for (const r of rows) {
+      allRows.push({
+        name: r.name,
+        opponent_team: r.opponent_team,
+        total_points: r.total_points,
+        goals_scored: r.goals_scored,
+        assists: r.assists,
+      });
+    }
   }
 
   cachedData = allRows;
